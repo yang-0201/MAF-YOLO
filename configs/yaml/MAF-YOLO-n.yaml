@@ -1,0 +1,51 @@
+depth_multiple: 1  # model depth multiple
+width_multiple: 0.375  # layer channel multiple
+backbone:
+  # [from, number, module, args]
+  [[-1, 1, RepVGGBlock, [64, 3, 2]],  # 0-P1/2
+   [-1, 1, RepVGGBlock, [128, 3, 2]],  # 1-P2/4
+   [ -1, 1, RepHDW, [ 48, True, 0.5, 3, 3] ],
+   [-1, 1, MPRep, [256]],  # 3-P3/8
+   [ -1, 1, RepHDW, [ 96, True, 0.5, 5, 3] ],
+   [-1, 1, MPRep, [512]],  # 5-P4/16
+   [ -1, 1, RepHDW, [ 192, True, 0.5, 7, 3] ],
+   [-1, 1, MPRep, [1024]],  # 7-P5/32
+   [ -1, 1, RepHDW, [ 384, True, 0.5, 9, 3] ],
+   [-1, 1, SPPF, [1024, 5]]] # 9
+neck:
+   [
+   [ 6, 1,ConvWrapper,[ 96, 3, 2 ] ],
+   [ [ -1, 9 ], 1, Concat, [ 1 ] ], # 576
+   [ -1, 1, RepHDW, [ 192, False, 0.5, 9, 3] ],  #  12
+
+    [ -1, 1, nn.Upsample, [ None, 2, 'nearest' ] ],
+    [ 4, 1,ConvWrapper,[ 64, 3, 2 ] ],
+   [ [ -1, 6, -2 ], 1, Concat, [1] ], # 576
+    [ -1, 1, RepHDW, [ 128, False, 0.5, 7, 3] ],  #  16
+
+    [ -1, 1, nn.Upsample, [ None, 2, 'nearest' ] ],
+    [ 2, 1,ConvWrapper,[ 64, 3, 2 ] ],
+   [[-1, 4, -2], 1, Concat, [1]],
+    [ -1, 1, RepHDW, [ 128, False, 0.5, 5, 3] ], # merge_4 20
+
+   [ [ -1, 17 ], 1, Concat,[ 1] ],
+   [ -1, 1, RepHDW, [ 128, False, 0.5, 5, 3] ] , #  merge_5  22  out
+
+    [ -1, 1,ConvWrapper,[ 128, 3, 2 ] ],
+    [ 20, 1,ConvWrapper,[ 128, 3, 2 ] ],
+    [ [ -2, -1, 16, 13,], 1, Concat, [ 1 ] ], # 256
+    [ -1, 1, RepHDW, [128, False, 0.5, 7, 3] ], #   merge_7  26  out
+
+    [ -1, 1,ConvWrapper,[ 128, 3, 2 ] ],
+    [ 16, 1,ConvWrapper,[ 128, 3, 2 ] ],
+    [ [ -2, -1, 12], 1, Concat, [ 1] ], # 704
+    [ -1, 1, RepHDW, [192, False, 0.5, 9,  3] ], #  merge_6 25  out
+   ]
+
+effidehead:
+  [[22, 1,Head_DepthUni , [341, 16, 5]],  ##170 * 0.375 = 64
+  [26, 1, Head_DepthUni , [341, 16, 7]],   ##341 * 0.375 = 128
+  [30, 1, Head_DepthUni , [512, 16, 9]],   ##682 * 0.375 = 256
+  [[31, 32, 33], 1, Out, []]]
+
+

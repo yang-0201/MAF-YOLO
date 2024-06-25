@@ -1,0 +1,13 @@
+# COCO 2017 dataset http://cocodataset.org
+train: /home/amax4090/yang/VisDrone/images/VisDrone2019-DET-train # 118287 images
+test: /home/amax4090/yang/VisDrone/images/VisDrone2019-DET-val  # 5000 images
+val: /home/amax4090/yang/VisDrone/images/VisDrone2019-DET-test-dev
+#anno_path: /home/amax4090/yang/coco/coco_yolo/annotations_trainval2017/annotations/instances_val2017.json
+# number of classes
+nc: 10
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: False
+
+# class names
+names: [ 'pedestrian', 'people', 'bicycle', 'car', 'van', 'truck', 'tricycle', 'awning-tricycle', 'bus', 'motor']
+
