@@ -1,7 +1,7 @@
 # YOLOv6n model
 model = dict(
     type='YOLOv6n',
-    pretrained="MAF-YOLO-m.pt",
+    pretrained="MAFYOLOm.pt",
     build_type='yaml',
     yaml_file='configs/yaml/MAF-YOLO-m.yaml',
     depth_multiple=0.33,

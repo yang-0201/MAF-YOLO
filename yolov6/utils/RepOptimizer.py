@@ -2,17 +2,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from ..layers.common import RealVGGBlock, LinearAddBlock
 from torch.optim.sgd import SGD
 from yolov6.utils.events import LOGGER
 
 
 def extract_blocks_into_list(model, blocks):
    for module in model.children():
-        if isinstance(module, LinearAddBlock) or isinstance(module, RealVGGBlock):
-            blocks.append(module)
-        else:
-            extract_blocks_into_list(module, blocks)
+        extract_blocks_into_list(module, blocks)
 
 
 def extract_scales(model):
@@ -20,7 +16,6 @@ def extract_scales(model):
     extract_blocks_into_list(model['model'], blocks)
     scales = []
     for b in blocks:
-        assert isinstance(b, LinearAddBlock)
         if hasattr(b, 'scale_identity'):
             scales.append((b.scale_identity.weight.detach(), b.scale_1x1.weight.detach(), b.scale_conv.weight.detach()))
         else:

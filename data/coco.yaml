@@ -1,8 +1,9 @@
 # COCO 2017 dataset http://cocodataset.org
-train: /home/amax4090/yang/coco/coco_yolo/images/train2017 # 118287 images
-val: /home/amax4090/yang/coco/coco_yolo/images/val2017  # 5000 images
-test: /home/amax4090/yang/coco/coco_yolo/images/test2017
-anno_path: c
+train: D:/Detection/coco/images/val2017 # 118287 images
+val: D:/Detection/coco/images/val2017  # 5000 images
+test: H:/coco/coco_yolo/images/test-dev
+anno_path: D:/Detection/coco/annotations/instances_val2017.json
+
 # number of classes
 nc: 80
 # whether it is coco dataset, only coco dataset should be set to True.

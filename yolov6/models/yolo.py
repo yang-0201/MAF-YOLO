@@ -6,8 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from yolov6.layers.common import *
 from yolov6.utils.torch_utils import initialize_weights
-from yolov6.models.efficientrep import *
-from yolov6.models.reppan import *
+
 from yolov6.models.effidehead import Detect, build_effidehead_layer
 from utils.general import LOGGER
 from utils.torch_utils import model_info
@@ -23,14 +22,13 @@ def parse_model(d, ch = 3,nc = 0):  # model_dict, input_channels(3)
                 args[j] = eval(a) if isinstance(a, str) else a  # eval strings
             except NameError:
                 pass
-
         n = n_  = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [Conv_C3,Bottleneck, SPPF,RepBlock,RepConvBlock1,SimConv,RepConvBlock,RepVGGBlock,QARepVGGBlock,Transpose,SimSPPF,SPSimCSPSPPF,SPPCSPC,SimCSPSPPF,BepC3, BepBotC3, Conv]:
+        if m in [SimConv,RepConvBlock,RepVGGBlock,QARepVGGBlock,Transpose,SimSPPF,SimCSPSPPF, Conv, SPPF]:
             c1, c2 = ch[f], args[0]
             c2 = make_divisible(c2 * gw, 4)
 
             args = [c1, c2, *args[1:]]
-            if m in [ RepBlock,RepConvBlock,RepConvBlock1]:
+            if m in [ RepConvBlock]:
                 args.insert(2, n)  # number of repeats
                 n = 1
         elif m in [CSPDepthResELAN,CSPRepResELAN, CSPSDepthResELAN, SDepthMP, RepHDW, RepELANMS,RepELANMS2]:
@@ -43,7 +41,7 @@ def parse_model(d, ch = 3,nc = 0):  # model_dict, input_channels(3)
             args = [c1, c2, *args[1:]]
         elif m is nn.BatchNorm2d:
             args = [ch[f]]
-        elif m in [Concat, SimFusion_3in]:
+        elif m in [Concat]:
             c2 = sum(ch[x] for x in f)
         elif m in [Out]:
             pass
@@ -55,94 +53,18 @@ def parse_model(d, ch = 3,nc = 0):  # model_dict, input_channels(3)
             c1, c2 = ch[f], args[0]
             c2 = make_divisible(c2 * gw, 8)
             args = [c1, c2, args[1],args[2], nc]
-
-        elif m in [Stem,ConvWrapper,Transpose,iRMB]:
+        elif m in [Stem,ConvWrapper,Transpose]:
             c1 = ch[f]
             c2 = args[0]
             args = [c1, c2, *args[1:]]
-        elif m in [FocalC3, BotNet]:
-            c1 = ch[f]
-            c2 = args[0]
-            c2 = make_divisible(c2 * gw, 8)
-            args = [c1, c2 ,*args[1:]]
-        elif m in [ConvBNAct, Focal_Depth]:
-            c1 = ch[f]
-            c2 = args[0]
-            # c2 = make_divisible(c2 * gw, 8)
-            args = [c1, c2 ,*args[1:]]
-        elif m in [VSS_Out]:
-            c1 = ch[f]
-            c2 = int(c1 / 3)
-            args = [c2, args[0]]
-        elif m in [Focus, TinyNAS_CSP_2]:
-            c1 = args[0]
-            c2 = args[1]
-        elif m in [SuperResStem, TinyNAS_CSP, RepGFPN, SPDepthGFPN,SPRepGFPN, DepthGFPN, ConvBnAct, FocalTransformer, CoAtNetMBConv, ConvGE, CoAtNetTrans, MBConv_block, CoAtTrans_block,
-                   MBConvC3]:
-            c1 = ch[f]
-            c2 = args[0]
-            args = [c1, c2, *args[1:]]
-        elif m in [RepGhostC3]:
-            c1 = ch[f]
-            c2 = args[0]
-            c_mid = args[1]
-            c2 = make_divisible(c2 * gw, 8)
-            c_mid = make_divisible(c_mid * gw, 8)
-            args = [c1, c2, c_mid,*args[2:]]
-        elif m in [RepGhostBottleneck]:
-            c1 = args[0]
-            c2 = int(args[3] * args[5])
-        elif m in [ ELAN, ELAN_H, E_ELAN]:
-            c2 = args[1]
-        elif m is Sequentially_Add:
-            c2 = args[0]
-
-            pass
         elif m in [AVG_down]:
             c1 = ch[f]
             c2 = c1
-
-
-        elif m in [MP1,MPRep]:
+        elif m in [MPRep]:
             c1 = ch[f]
             c2 = args[0]
             c2 = make_divisible(c2 * gw, 8)
             args = [c1, c2, *args[1:]]
-        elif m in [EAEF]:
-            c1 = args[0]
-            c2 = args[0]
-        elif m is EAEF_out:
-            c1 = args[1]
-            c2 = args[1]
-            args = [args[0]]
-        elif m is LowAttentionConcat0:
-            c1 = [ch[x] for x in f]
-            c2 = args[0] + args[0]//2
-            args = [c1, args[0]]
-        elif m in [LAC]:
-            c1 = [ch[x] for x in f]
-            c2 = args[0] + args[0]//2
-            args = [c1, args[0]]
-        elif m in [HAC]:
-            c1 = [ch[x] for x in f]
-            c2 = args[1]
-            args = [c1, args[0], c2]
-        elif m in [HAC1]:
-            c1 = [ch[x] for x in f]
-            c2 = args[0] * 2
-            args = [c1, args[0]]
-        elif m is LACv2:
-            c1 = [ch[x] for x in f]
-            c2 = args[0] + args[0]
-            args = [c1, args[0]]
-        elif m is LowAttentionConcat_up:
-            c1 = args[0]
-            c2 = 3 * c1 
-            args = [c1, args[1], args[2]]
-        elif m is HighAttentionConcat:
-            c1 = args[0]
-            c2 = 3 * c1
-            args = [c1, args[1]]         
         else:
             c2 = ch[f]
 
@@ -230,12 +152,8 @@ class Model(nn.Module):
 
                 if m.f != -1:  # if not from previous layer
                     x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
-                # try:
                 number_layer = number_layer+1
                 x = m(x)  # run
-                # except:
-                #     print("run error ,error layer: "+str(number_layer-1))
-
                 y.append(x if m.i in self.save else None)  # save output
         ############
         else:

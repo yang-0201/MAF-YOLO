@@ -1,9 +1,9 @@
 import torch
 import os.path as osp
 
-save_ckpt_dir = osp.join("best_38.5.pt")
-ckpt_path = save_ckpt_dir
 
+ckpt_path = osp.join("MAF-YOLO-m.pt")
+save_ckpt_dir = osp.join("MAF-YOLO-m-small.pt")
 ckpt = torch.load(ckpt_path, map_location=torch.device('cpu'))
 if ckpt.get('ema'):
     ckpt['model'] = ckpt['ema']  # replace model with ema
@@ -13,4 +13,4 @@ ckpt['epoch'] = 300
 ckpt['model'].half()  # to FP16
 for p in ckpt['model'].parameters():
     p.requires_grad = False
-torch.save(ckpt, ckpt_path)
+torch.save(ckpt, save_ckpt_dir)

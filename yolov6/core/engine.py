@@ -175,10 +175,10 @@ class Trainer:
                 self.eval_model()
                 self.ap = self.evaluate_results[1]
                 self.ap_50 = self.evaluate_results[0]
-                self.ap_75 = self.evaluate_results_more[0]
-                self.ap_s = self.evaluate_results_more[1]
-                self.ap_m = self.evaluate_results_more[2]
-                self.ap_l = self.evaluate_results_more[3]
+                # self.ap_75 = self.evaluate_results_more[0]
+                # self.ap_s = self.evaluate_results_more[1]
+                # self.ap_m = self.evaluate_results_more[2]
+                # self.ap_l = self.evaluate_results_more[3]
                 self.best_ap = max(self.ap, self.best_ap)
                 if self.ap >= self.best_ap:
                     self.best_epoch = self.epoch
@@ -219,8 +219,9 @@ class Trainer:
                 import wandb
                 wandb.log({"train/all_loss": self.total_loss, "train/iou_loss": self.loss_items[0], "train/dfl_loss": self.loss_items[1],
                            "train/cls_loss": self.loss_items[2],"metrics/mAP_0.5": self.evaluate_results[0], "metrics/mAP_0.5:0.95": self.evaluate_results[1],
-                           "metrics/mAP_0.75": self.evaluate_results_more[0],"metrics/mAP_s": self.evaluate_results_more[1],"metrics/mAP_m": self.evaluate_results_more[2]
-                           ,"metrics/mAP_l": self.evaluate_results_more[3]})
+                           # "metrics/mAP_0.75": self.evaluate_results_more[0],"metrics/mAP_s": self.evaluate_results_more[1],"metrics/mAP_m": self.evaluate_results_more[2]
+                           # ,"metrics/mAP_l": self.evaluate_results_more[3]
+                           })
                 # wandb.log({"train/all_loss": (self.mean_loss[0]+self.mean_loss[1]+self.mean_loss[2]), "train/iou_loss": self.mean_loss[0], "train/dfl_loss": self.mean_loss[1],
                 #            "train/cls_loss": self.mean_loss[2],"metrics/mAP_0.5": self.evaluate_results[0], "metrics/mAP_0.5:0.95": self.evaluate_results[1]})
             # log for tensorboard
@@ -275,7 +276,7 @@ class Trainer:
 
         LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
         self.evaluate_results = results[:2]
-        self.evaluate_results_more = results[2:6]
+        #self.evaluate_results_more = results[2:6]
         # plot validation predictions
         self.plot_val_pred(vis_outputs, vis_paths)
 
@@ -291,7 +292,7 @@ class Trainer:
         self.best_ap, self.ap = 0.0, 0.0
         self.best_stop_strong_aug_ap = 0.0
         self.evaluate_results = (0, 0) # AP50, AP50_95
-        self.evaluate_results_more = (0, 0, 0, 0)
+        #self.evaluate_results_more = (0, 0, 0, 0)
         self.compute_loss = ComputeLoss(fpn_strides = self.cfg.model.head.strides,
                                         num_classes=self.data_dict['nc'],
                                         ori_img_size=self.img_size,
