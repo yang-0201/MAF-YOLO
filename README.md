@@ -1,7 +1,7 @@
 # MAF-YOLO
 [![arxiv.org](http://img.shields.io/badge/cs.CV-arXiv%3A2407.04381-B31B1B.svg)](https://arxiv.org/abs/2407.04381)
 
-This is the official MegEngine implementation of MAF-YOLO, from the following PRCV2024-2024 paper:
+This is the official MegEngine implementation of MAF-YOLO, from the following PRCV2024 paper:
 
 [Multi-Branch Auxiliary Fusion YOLO with Re-parameterization Heterogeneous Convolutional for accurate object detection.](https://arxiv.org/abs/2407.04381)
 
@@ -46,7 +46,7 @@ python tools/eval.py --weights MAFYOLOm.pt --data data/coco.yaml --reproduce_640
 ## Train
 Single GPU training
 ```python
-# Loading pre-trained weights to train MAFYOLOn
+# Loading pre-trained weight to train MAFYOLOn
 python tools/train.py --conf configs/pretrain/MAF-YOLO-n-pretrain.py --data data/coco.yaml --device 0
 
 # Training MAFYOLOn from scratch
