@@ -559,7 +559,7 @@ class TrainValDataset(Dataset):
                     x2 = (x + w / 2) * img_w
                     y2 = (y + h / 2) * img_h
                     # cls_id starts from 0
-                    cls_id = int(c)
+                    cls_id = int(c) + 1
                     w = max(0, x2 - x1)
                     h = max(0, y2 - y1)
                     dataset["annotations"].append(

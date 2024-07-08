@@ -17,7 +17,7 @@ from yolov6.core.inferer import Inferer
 
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Inference.', add_help=add_help)
-    parser.add_argument('--weights', type=str, default='weights/yolov6n.pt', help='model path(s) for inference.')
+    parser.add_argument('--weights', type=str, default='MAFYOLOn.pt', help='model path(s) for inference.')
     parser.add_argument('--source', type=str, default='data/images/val', help='the source path, e.g. image-file/dir.')
     parser.add_argument('--yaml', type=str, default='data/coco.yaml', help='data yaml file.')
     parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='the image-size(h,w) in inference size.')

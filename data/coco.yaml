@@ -1,8 +1,8 @@
 # COCO 2017 dataset http://cocodataset.org
-train: D:/Detection/coco/images/val2017 # 118287 images
-val: D:/Detection/coco/images/val2017  # 5000 images
-test: H:/coco/coco_yolo/images/test-dev
-anno_path: D:/Detection/coco/annotations/instances_val2017.json
+train: ../datasets/coco/images/test2017 # 118287 images
+val: ../datasets/coco/images/val2017  # 5000 images
+test: ../datasets/coco/images/test2017
+anno_path: ../datasets/coco/annotations/instances_test2017.json
 
 # number of classes
 nc: 80

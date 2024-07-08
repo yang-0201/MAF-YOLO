@@ -790,7 +790,7 @@ class TrainValDataset(Dataset):
         dataset = {"categories": [], "annotations": [], "images": []}
         for i, class_name in enumerate(class_names):
             dataset["categories"].append(
-                {"id": i, "name": class_name, "supercategory": ""}
+                {"id": i + 1, "name": class_name, "supercategory": ""}
             )
 
         ann_id = 0
@@ -816,7 +816,7 @@ class TrainValDataset(Dataset):
                     x2 = (x + w / 2) * img_w
                     y2 = (y + h / 2) * img_h
                     # cls_id starts from 0
-                    cls_id = int(c)
+                    cls_id = int(c) + 1
                     w = max(0, x2 - x1)
                     h = max(0, y2 - y1)
                     dataset["annotations"].append(
