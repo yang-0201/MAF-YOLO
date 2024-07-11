@@ -82,6 +82,19 @@ names: ["car","person","bike"] #类别名称
 ```
 </details>
 
+## Citation
+
+If our code or model is helpful to your work, please cite our paper. We would be very grateful!
+
+```BibTeX
+@article{yang2024multi,
+  title={Multi-Branch Auxiliary Fusion YOLO with Re-parameterization Heterogeneous Convolutional for accurate object detection},
+  author={Yang, Zhiqiang and Guan, Qiu and Zhao, Keer and Yang, Jianmin and Xu, Xinli and Long, Haixia and Tang, Ying},
+  journal={arXiv preprint arXiv:2407.04381},
+  year={2024}
+}
+```
+
 ## Acknowledgements
 
 * [https://github.com/meituan/YOLOv6](https://github.com/meituan/YOLOv6)
