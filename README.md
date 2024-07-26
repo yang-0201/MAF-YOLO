@@ -18,12 +18,18 @@ MS COCO
 
 | Model                                                  | Test Size | #Params | FLOPs | AP<sup>val</sup> | AP<sub>50</sub><sup>val</sup> | AP<sup>test2017</sup> | AP<sub>50</sub><sup>test2017</sup> |epoch |
 |:-------------------------------------------------------|:----:|:-------:|:-----:|:----------------:|:-----------------------------:|:-----------------------------:|:-----------------------------:|:-----------------------------:|
-| [MAFYOLO-N](https://github.com/yang-0201/MAF-YOLO/releases/download/v1.0.0/MAFYOLOn.pt) |   640  |  3.8M   | 10.5G |      42.4%       |             58.9%          | 42.1% | 58.6% | 300 | 
-| [MAFYOLO-S](https://github.com/yang-0201/MAF-YOLO/releases/download/v1.0.0/MAFYOLOs.pt) |   640  |  8.6M   | 25.5G |      47.4%       |             64.3%         | 47.2% | 64.0%    |300 |
-| [MAFYOLO-M](https://github.com/yang-0201/MAF-YOLO/releases/download/v1.0.0/MAFYOLOm.pt) |   640  |  23.7M  | 76.7G |      51.2%       |             68.5%           | 50.9% | 68.1%   |300 |
+| [MAF-YOLO-N](https://github.com/yang-0201/MAF-YOLO/releases/download/v1.0.0/MAFYOLOn.pt) |   640  |  3.8M   | 10.5G |      42.4%       |             58.9%          | 42.1% | 58.6% | 300 | 
+| [MAF-YOLO-S](https://github.com/yang-0201/MAF-YOLO/releases/download/v1.0.0/MAFYOLOs.pt) |   640  |  8.6M   | 25.5G |      47.4%       |             64.3%         | 47.2% | 64.0%    |300 |
+| [MAF-YOLO-M](https://github.com/yang-0201/MAF-YOLO/releases/download/v1.0.0/MAFYOLOm.pt) |   640  |  23.7M  | 76.7G |      51.2%       |             68.5%           | 50.9% | 68.1%   |300 |
 
-
-
+Our second version of the work to improve on YOLOv10 has yielded preliminary results that compare favorably with both YOLOv9 and YOLOv10, which will be made public in the future!
+    
+| Model                                                  | Test Size | #Params | FLOPs | AP<sup>val</sup> | AP<sub>50</sub><sup>val</sup> | AP<sup>test2017</sup> | AP<sub>50</sub><sup>test2017</sup> |epoch |
+|:-------------------------------------------------------|:----:|:-------:|:-----:|:----------------:|:-----------------------------:|:-----------------------------:|:-----------------------------:|:-----------------------------:|
+| YOLOv10n |   640  |  2.3M   | 6.7G |      38.5%       |             53.8%          | 38.7% | 54.4% | 500 | 
+| YOLOv10s |   640  |  7.2M   | 21.6G |      46.3%       |             63.0%         | 45.9% | 62.4%    |500 |
+| MAF-YOLOv10n |   640  |  2.2M   | 7.2G |      42.3%       |             58.5%          | 42.3% | 58.4% | 500 | 
+| MAF-YOLOv10s |   640  |  7.1M   | 25.3G |      48.9%       |             65.9%         | 48.8% | 65.5%    |500 |
 ## Installation
 
 ```
