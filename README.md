@@ -5,6 +5,7 @@ This is the official MegEngine implementation of MAF-YOLO, from the following PR
 
 [Multi-Branch Auxiliary Fusion YOLO with Re-parameterization Heterogeneous Convolutional for accurate object detection.](https://arxiv.org/abs/2407.04381)
 
+Article Interpretation: [集智书童](https://mp.weixin.qq.com/s/2Kdp0VWP-AKK70yq7TExFg)
 
 <div align="center">
     <a href="./">
@@ -12,7 +13,7 @@ This is the official MegEngine implementation of MAF-YOLO, from the following PR
     </a>
 </div>
 
-## Preformance
+## Performance
 MS COCO
 
 | Model                                                  | Test Size | #Params | FLOPs | AP<sup>val</sup> | AP<sub>50</sub><sup>val</sup> | AP<sup>test2017</sup> | AP<sub>50</sub><sup>test2017</sup> |epoch |
@@ -77,8 +78,8 @@ python -m torch.distributed.run --nproc_per_node 4 --master_port 9527 python too
 train: data/images/train 
 val: data/images/val 
 is_coco: False
-nc: 3  # 设置为你的类别数量
-names: ["car","person","bike"] #类别名称
+nc: 3  
+names: ["car","person","bike"] 
 ```
 </details>
 
