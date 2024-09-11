@@ -40,8 +40,8 @@ data_aug = dict(
     fliplr=0.5,
     mosaic=1.0,
     mixup=0.0,
-    dy_label=5,
-    dy_mixup=0.2,
-    mask_refine = True,
-    copy_paste = 0.05,
+    dy_label=0,
+    dy_mixup=0,
+    mask_refine = False,
+    copy_paste = 0,
 )

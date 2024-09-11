@@ -24,6 +24,11 @@ class ComputeLoss:
                  use_dfl=True,
                  reg_max=16,
                  iou_type='giou',
+                # loss_weight={
+                #      'class': 1.0,
+                #      'iou': 5,
+                #      'dfl': 0.5}
+                #  ):
                  loss_weight={
                      'class': 1.0,
                      'iou': 2.5,

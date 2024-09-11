@@ -25,9 +25,6 @@ def build_optimizer(cfg, model):
         optimizer = torch.optim.SGD(g_bnw, lr=cfg.solver.lr0, momentum=cfg.solver.momentum, nesterov=True)
     elif cfg.solver.optim == 'Adam':
         optimizer = torch.optim.Adam(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999))
-    elif cfg.solver.optim == 'AdamW':
-        optimizer = torch.optim.AdamW(g_bnw, lr=cfg.solver.lr0, betas=(cfg.solver.momentum, 0.999))
-
 
     optimizer.add_param_group({'params': g_w, 'weight_decay': cfg.solver.weight_decay})
     optimizer.add_param_group({'params': g_b})
@@ -42,10 +39,8 @@ def build_lr_scheduler(cfg, optimizer, epochs):
         lf = lambda x: ((1 - math.cos(x * math.pi / (epochs))) / 2) * (cfg.solver.lrf - 1) + 1
     elif cfg.solver.lr_scheduler == 'Constant':
         lf = lambda x: 1.0
-    elif  cfg.solver.lr_scheduler == 'linear':      
-        lf = lambda x: (1 - x / epochs) * (1.0 - cfg.solver.lrf ) + cfg.solver.lrf  # linear
-
-        
+    elif cfg.solver.lr_scheduler == 'linear':
+        lf = lambda x: (1 - x / epochs) * (1.0 - cfg.solver.lrf) + cfg.solver.lrf
     else:
         LOGGER.error('unknown lr scheduler, use Cosine defaulted')
 

@@ -16,7 +16,7 @@ from collections import deque
 from yolov6.utils.events import LOGGER, load_yaml
 from yolov6.layers.common import DetectBackend
 from yolov6.data.data_augment import letterbox
-from yolov6.data.datasets import LoadData
+from yolov6.data.datasets_new import LoadData
 from yolov6.utils.nms import non_max_suppression
 from yolov6.utils.torch_utils import get_model_info
 

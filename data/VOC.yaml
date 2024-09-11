@@ -1,8 +1,7 @@
 # Please insure that your custom_dataset are put in same parent dir with YOLOv6_DIR
-train: /home/amax4090/yang/VOC/images/train_16551
-
+train: D:/Detection/datasets/VOC/images/train2007
 # train images
-val: /home/amax4090/yang/VOC/images/test2007 # val images
+val:  D:/Detection/datasets/VOC/images/val2007 # val images
 test: VOCdevkit/voc_07_12/images/val # test images (optional)
 
 # whether it is coco dataset, only coco dataset should be set to True.

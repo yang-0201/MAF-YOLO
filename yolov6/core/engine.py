@@ -32,7 +32,7 @@ class Trainer:
     def __init__(self, args, cfg, device):
         if args.wandb:
             import wandb
-            wandb.init(project="MAF-YOLO2", name=args.name,entity="yangyang0201", config=args) #entity is your wandb account name
+            wandb.init(project="MA-YOLO-YOLOv9", name=args.name,entity="yangyang0201", config=args) #entity is your wandb account name
         self.args = args
         self.cfg = cfg
         self.device = device
@@ -131,6 +131,7 @@ class Trainer:
             LOGGER.error('ERROR in training steps.')
             raise
         try:
+            torch.save(self.model.state_dict(),"exp1.pt")
             self.eval_and_save()
         except Exception as _:
             LOGGER.error('ERROR in evaluate and save model.')
@@ -175,13 +176,20 @@ class Trainer:
                 self.eval_model()
                 self.ap = self.evaluate_results[1]
                 self.ap_50 = self.evaluate_results[0]
-                # self.ap_75 = self.evaluate_results_more[0]
-                # self.ap_s = self.evaluate_results_more[1]
-                # self.ap_m = self.evaluate_results_more[2]
-                # self.ap_l = self.evaluate_results_more[3]
+                self.ap_75 = self.evaluate_results_more[0]
+                self.ap_s = self.evaluate_results_more[1]
+                self.ap_m = self.evaluate_results_more[2]
+                self.ap_l = self.evaluate_results_more[3]
                 self.best_ap = max(self.ap, self.best_ap)
                 if self.ap >= self.best_ap:
                     self.best_epoch = self.epoch
+                # # 要写入的内容
+                # texts = "best mAP@0.50:0.95:" + str(self.best_ap) + "  best epoch:" {self.best_epoch}\n"
+                
+                # # 打开文件，如果文件不存在会自动创建
+                # with open('example.txt', 'a') as file:
+                #     for text in texts:
+                #         file.write(text)
                 LOGGER.info(f"best mAP@0.50:0.95: {self.best_ap} | best epoch: {self.best_epoch}")
             # save ckpt
             ckpt = {
@@ -199,7 +207,7 @@ class Trainer:
             #         'epoch': self.epoch,
             #         }
             # self.model = torch.compile(self.model)
-            # torch.save(self.model.state_dict(),"exp.pt")
+            torch.save(self.model.state_dict(),"exp.pt")
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
             save_checkpoint(ckpt, (is_val_epoch) and (self.ap == self.best_ap), save_ckpt_dir, model_name='last_ckpt')
             if self.epoch >= self.max_epoch - self.args.save_ckpt_on_last_n_epoch:
@@ -219,9 +227,8 @@ class Trainer:
                 import wandb
                 wandb.log({"train/all_loss": self.total_loss, "train/iou_loss": self.loss_items[0], "train/dfl_loss": self.loss_items[1],
                            "train/cls_loss": self.loss_items[2],"metrics/mAP_0.5": self.evaluate_results[0], "metrics/mAP_0.5:0.95": self.evaluate_results[1],
-                           # "metrics/mAP_0.75": self.evaluate_results_more[0],"metrics/mAP_s": self.evaluate_results_more[1],"metrics/mAP_m": self.evaluate_results_more[2]
-                           # ,"metrics/mAP_l": self.evaluate_results_more[3]
-                           })
+                           "metrics/mAP_0.75": self.evaluate_results_more[0],"metrics/mAP_s": self.evaluate_results_more[1],"metrics/mAP_m": self.evaluate_results_more[2]
+                           ,"metrics/mAP_l": self.evaluate_results_more[3]})
                 # wandb.log({"train/all_loss": (self.mean_loss[0]+self.mean_loss[1]+self.mean_loss[2]), "train/iou_loss": self.mean_loss[0], "train/dfl_loss": self.mean_loss[1],
                 #            "train/cls_loss": self.mean_loss[2],"metrics/mAP_0.5": self.evaluate_results[0], "metrics/mAP_0.5:0.95": self.evaluate_results[1]})
             # log for tensorboard
@@ -276,7 +283,7 @@ class Trainer:
 
         LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
         self.evaluate_results = results[:2]
-        #self.evaluate_results_more = results[2:6]
+        self.evaluate_results_more = results[2:6]
         # plot validation predictions
         self.plot_val_pred(vis_outputs, vis_paths)
 
@@ -292,7 +299,7 @@ class Trainer:
         self.best_ap, self.ap = 0.0, 0.0
         self.best_stop_strong_aug_ap = 0.0
         self.evaluate_results = (0, 0) # AP50, AP50_95
-        #self.evaluate_results_more = (0, 0, 0, 0)
+        self.evaluate_results_more = (0, 0, 0, 0)
         self.compute_loss = ComputeLoss(fpn_strides = self.cfg.model.head.strides,
                                         num_classes=self.data_dict['nc'],
                                         ori_img_size=self.img_size,
@@ -322,15 +329,17 @@ class Trainer:
         if self.epoch > self.start_epoch:
             self.scheduler.step()
         #stop strong aug like mosaic and mixup from last n epoch by recreate dataloader
-        # if self.epoch == self.max_epoch - self.args.stop_aug_last_n_epoch - 15:
-        #     self.cfg.data_aug.mixup = 0.0
-        #     self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict)
-
-        if self.epoch == self.max_epoch - self.args.stop_aug_last_n_epoch:
+        if self.epoch == self.max_epoch - self.args.stop_aug_last_n_epoch - 15:
             self.cfg.data_aug.mosaic = 0.0
             self.cfg.data_aug.mixup = 0.0
             self.cfg.data_aug.dy_mixup = 0.0
             self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict)
+
+        # if self.epoch >= self.max_epoch - self.args.stop_aug_last_n_epoch:
+        #     self.cfg.data_aug.mosaic = 0.0
+        #     self.cfg.data_aug.mixup = 0.0
+        #     self.cfg.data_aug.dy_mixup = 0.0
+        #     self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict)
         self.model.train()
         if self.rank != -1:
             self.train_loader.sampler.set_epoch(self.epoch)

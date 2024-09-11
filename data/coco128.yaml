@@ -1,11 +1,21 @@
-# COCO 2017 dataset http://cocodataset.org
-train: D:/Detection/coco128/images/train2017 # 118287 images
-val: D:/Detection/coco128/images/train2017  # 5000 images
-test: H:/coco/coco_yolo/images/test-dev
-# number of classes
+# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# COCO128 dataset https://www.kaggle.com/ultralytics/coco128 (first 128 images from COCO train2017) by Ultralytics
+# Example usage: python train.py --data coco128.yaml
+# parent
+# ├── yolov5
+# └── datasets
+#     └── coco128  ← downloads here (7 MB)
+
+
+# Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
+train: ../datasets/coco128/images/train2017  # train images (relative to 'path') 128 images
+val: ../datasets/coco128/images/train2017  # val images (relative to 'path') 128 images
+test:  # test images (optional)
+anno_path: ../datasets/coco128/instances_val2017.json
+
 nc: 80
 # whether it is coco dataset, only coco dataset should be set to True.
-is_coco: False
+is_coco: True
 
 # class names
 names: [ 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',

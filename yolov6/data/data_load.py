@@ -74,6 +74,7 @@ def create_dataloader(
             sampler=sampler,
             pin_memory=True,
             collate_fn=TrainValDataset.collate_fn,
+            # drop_last = True,
         ),
         dataset,
     )

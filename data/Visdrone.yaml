@@ -1,7 +1,7 @@
 # COCO 2017 dataset http://cocodataset.org
-train: /home/amax4090/yang/VisDrone/images/VisDrone2019-DET-train # 118287 images
-test: /home/amax4090/yang/VisDrone/images/VisDrone2019-DET-val  # 5000 images
-val: /home/amax4090/yang/VisDrone/images/VisDrone2019-DET-test-dev
+train: D:/Detection/datasets/VisDrone/images/train # 118287 images
+val: D:/Detection/datasets/VisDrone/images/VisDrone2019-DET-val  # 5000 images
+test: D:/Detection/datasets/VisDrone/images/VisDrone2019-DET-test-dev
 #anno_path: /home/amax4090/yang/coco/coco_yolo/annotations_trainval2017/annotations/instances_val2017.json
 # number of classes
 nc: 10

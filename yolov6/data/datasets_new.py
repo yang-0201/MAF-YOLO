@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
@@ -20,19 +19,29 @@ import torch
 from PIL import ExifTags, Image, ImageOps
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
+import copy
 from .data_augment import (
     augment_hsv,
     letterbox,
     mixup,
     random_affine,
     mosaic_augmentation,
+    albumentation,
 )
 from yolov6.utils.events import LOGGER
 
 # Parameters
 IMG_FORMATS = ["bmp", "jpg", "jpeg", "png", "tif", "tiff", "dng", "webp", "mpo"]
 VID_FORMATS = ["mp4", "mov", "avi", "mkv"]
+names = [ 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
+         'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+         'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+         'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard',
+         'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+         'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+         'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
+         'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear',
+         'hair drier', 'toothbrush' ]
 IMG_FORMATS.extend([f.upper() for f in IMG_FORMATS])
 VID_FORMATS.extend([f.upper() for f in VID_FORMATS])
 # Get orientation exif tag
@@ -59,6 +68,13 @@ class TrainValDataset(Dataset):
         rank=-1,
         data_dict=None,
         task="train",
+        use_cache = False,
+        max_cached_images = 40,
+        max_cached_mixup_images=40,
+        random_pop = True,
+        albument = True,
+        dy_cache_mixup = True
+
     ):
         assert task.lower() in ("train", "val", "test", "speed"), f"Not supported task: {task}"
         t1 = time.time()
@@ -66,24 +82,68 @@ class TrainValDataset(Dataset):
         self.main_process = self.rank in (-1, 0)
         self.task = self.task.capitalize()
         self.class_names = data_dict["names"]
-        self.img_paths, self.labels = self.get_imgs_labels(self.img_dir)
+        self.img_paths, self.labels ,self.segments= self.get_imgs_labels(self.img_dir)
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
             self.shapes = np.array(shapes, dtype=np.float64)
             self.batch_indices = np.floor(
                 np.arange(len(shapes)) / self.batch_size
             ).astype(
-                np.int
+                np.int64
             )  # batch indices of each image
             self.sort_files_shapes()
         t2 = time.time()
         if self.main_process:
             LOGGER.info(f"%.1fs for dataset initialization." % (t2 - t1))
 
+        self.all_results_cache = []
+        self.all_results_cache_mixup = []
+        self.dy_cache_mixup = dy_cache_mixup
+        self.albument = albument
+        self.num = 0
+        self.num1 = 0
+        self.small_num = 0
+
+
+        self.max_cached_images = max_cached_images
+        self.random_pop = random_pop
+        self.use_cache = use_cache
+        self.max_cached_mixup_images = max_cached_mixup_images
+
     def __len__(self):
         """Get the length of dataset"""
         return len(self.img_paths)
+    def picture(self,img,labels,img_name = "exp1"):
+        for label in labels:
+            x_min = int(label[1])
+            y_min = int(label[2])
+            x_max = int(label[3])
+            y_max = int(label[4])
+            name = int(label[0])
+            name = names[name]
+            cv2.rectangle(img, (x_min, y_min), (x_max, y_max), (0, 0, 0), 2)
+            cv2.putText(img, name, (x_min, y_min), 1, 1, (0, 0, 0))
+        #cv2.imwrite(img_name+".png", img)
+        cv2.imshow("myImage",img)
+        cv2.waitKey(0)
+    def change_label(self,labels, h, w):
+        n = 0
+        for label in labels:
+            name = label[0]
+            x = float(label[1])
+            y = float(label[2])
+            w1 = float(label[3])
+            h1 = float(label[4])
 
+            xmin = w * (x - (w1 / 2.0))
+            ymin = h * (y - (h1 / 2.0))
+            xmax = w * (x + (w1 / 2.0))
+            ymax = h * (y + (h1 / 2.0))
+
+
+            labels[n] = [name,xmin,ymin,xmax,ymax]
+            n = n +1
+        return labels
     def __getitem__(self, index):
         """Fetching a data sample for a given key.
         This function applies mosaic and mixup augments during training.
@@ -91,16 +151,48 @@ class TrainValDataset(Dataset):
         """
         # Mosaic Augmentation
         if self.augment and random.random() < self.hyp["mosaic"]:
-            img, labels = self.get_mosaic(index,randomResizeCrop = False)
+            img, labels = self.get_mosaic(index)
+            n = len(labels)
+
+            self.num = self.num + n
+            self.num1 = self.num1 + 1
+            # if n <= 5:
+            #     self.small_num = self.small_num + 1
+            # print(self.small_num/self.num1)
+
+            #self.picture(img, labels, "exp1")
             shapes = None
+            if self.dy_cache_mixup:
+                if  random.random() < self.hyp["mixup"]:
+                    img_other, labels_other = self.get_cache_mosaic(random.randint(0, len(self.img_paths) - 1))
+
+                    # self.picture(img_other, labels_other, "exp2")
+                    img, labels = mixup(img, labels, img_other, labels_other)
+                elif len(labels) <=  self.hyp['dy_label'] and random.random() < self.hyp["dy_mixup"]:
+                    self.small_num = self.small_num + 1
+                    #print(self.small_num / self.num1)
+                    img_other, labels_other = self.get_cache_mosaic(random.randint(0, len(self.img_paths) - 1))
+
+                    # self.picture(img_other, labels_other, "exp2")
+                    img, labels = mixup(img, labels, img_other, labels_other)
+                    # self.picture(img, labels, "exp3")
+                    # img_other, labels_other = self.get_mosaic_mixup(
+                    #     random.randint(0, len(self.img_paths) - 1)
+                    # )
+            # self.picture(img,labels,"exp1")
 
             # MixUp augmentation
-            if random.random() < self.hyp["mixup"]:
-
-                img_other, labels_other = self.get_mosaic(
-                    random.randint(0, len(self.img_paths) - 1),randomResizeCrop = True
-                )
-                img, labels = mixup(img, labels, img_other, labels_other)
+            if random.random() < self.hyp["mixup"]-1:
+                print(1)
+                # img_other, labels_other = self.get_mosaic_mixup(
+                #     random.randint(0, len(self.img_paths) - 1)
+                # )
+                index1 = random.randint(0, len(self.img_paths) - 1)
+                img_other, _, (h, w) = self.load_image(index1)
+                labels_other = self.labels[index1]
+                img, labels = mixup(self,img, labels, img_other, labels_other,h,w, type = "simple")
+                # self.picture(img, labels, "exp2")
+                # cv2.imwrite("myImage1.png", img)
 
         else:
             # Load image
@@ -167,6 +259,9 @@ class TrainValDataset(Dataset):
             labels[:, 1:] = boxes
 
         if self.augment:
+            if self.albument:
+                img,labels = albumentation(img,labels)
+
             img, labels = self.general_augment(img, labels)
 
         labels_out = torch.zeros((len(labels), 6))
@@ -182,6 +277,7 @@ class TrainValDataset(Dataset):
     def load_image(self, index, force_load_size=None):
         """Load image.
         This function loads image by cv2, resize original image to target shape(img_size) with keeping ratio.
+
         Returns:
             Image, original shape of image, resized image shape
         """
@@ -227,15 +323,29 @@ class TrainValDataset(Dataset):
         assert img_paths, f"No images found in {img_dir}."
 
         img_hash = self.get_hash(img_paths)
-        if osp.exists(valid_img_record):
-            with open(valid_img_record, "r") as f:
-                cache_info = json.load(f)
-                if "image_hash" in cache_info and cache_info["image_hash"] == img_hash:
-                    img_info = cache_info["information"]
-                else:
-                    self.check_images = True
-        else:
+        try:
+            cache_path = Path('./labels.cache')
+
+            cache_info, exists = np.load(cache_path, allow_pickle=True).item(), True
+            # labels, shapes, self.segments = zip(*cache_info.values())
+            if "image_hash" in cache_info and cache_info["image_hash"] == img_hash:
+                img_info = cache_info["information"]
+
+            else:
+                self.check_images = True
+            # load dict
+        except:
             self.check_images = True
+            cache_path = Path('./labels.cache')
+        # if osp.exists(valid_img_record):
+        #     with open(valid_img_record, "r") as f:
+        #         cache_info = json.load(f)
+        #         if "image_hash" in cache_info and cache_info["image_hash"] == img_hash:
+        #             img_info = cache_info["information"]
+        #         else:
+        #             self.check_images = True
+        # else:
+        #     self.check_images = True
 
         # check images
         if self.check_images and self.main_process:
@@ -311,14 +421,20 @@ class TrainValDataset(Dataset):
                 for (
                     img_path,
                     labels_per_file,
+                    lb,
                     nc_per_file,
                     nm_per_file,
                     nf_per_file,
                     ne_per_file,
                     msg,
+                    segments
                 ) in pbar:
                     if nc_per_file == 0:
                         img_info[img_path]["labels"] = labels_per_file
+                        img_info[img_path]["labels1"] = lb
+                        img_info[img_path]["segments"] = segments
+                        img_info[img_path]['cls'] = lb[:, 0:1]
+                        img_info[img_path]['bboxes'] = lb[:, 1:]
                     else:
                         img_info.pop(img_path)
                     nc += nc_per_file
@@ -331,8 +447,17 @@ class TrainValDataset(Dataset):
                         pbar.desc = f"{nf} label(s) found, {nm} label(s) missing, {ne} label(s) empty, {nc} invalid label files"
             if self.main_process:
                 pbar.close()
-                with open(valid_img_record, "w") as f:
-                    json.dump(cache_info, f)
+                try:
+                    path = Path('./labels.cache')
+                    np.save(path, cache_info)  # save cache for next time
+                    # path.with_suffix('.cache.npy').rename(path)  # remove .npy suffix
+                    LOGGER.info(f'New cache created: {path}')
+                except Exception as e:
+                    LOGGER.warning(
+                        f'WARNING ⚠️ Cache directory {path.parent} is not writeable: {e}')  # not writeable
+
+                # with open(valid_img_record, "w") as f:
+                #     json.dump(cache_info, f)
             if msgs:
                 LOGGER.info("\n".join(msgs))
             if nf == 0:
@@ -357,14 +482,13 @@ class TrainValDataset(Dataset):
                     img_info, self.class_names, save_path
                 )
 
-        img_paths, labels = list(
+        img_paths, labels,segments = list(
             zip(
                 *[
                     (
                         img_path,
-                        np.array(info["labels"], dtype=np.float32)
-                        if info["labels"]
-                        else np.zeros((0, 5), dtype=np.float32),
+                        np.array(info["labels"], dtype=np.float32) if info["labels"] else np.zeros((0, 5), dtype=np.float32),
+                        info["segments"] if info["segments"] else np.zeros((0, 5), dtype=np.float32),
                     )
                     for img_path, info in img_info.items()
                 ]
@@ -374,23 +498,145 @@ class TrainValDataset(Dataset):
         LOGGER.info(
             f"{self.task}: Final numbers of valid images: {len(img_paths)}/ labels: {len(labels)}. "
         )
-        return img_paths, labels
+        return img_paths, labels,segments
 
-    def get_mosaic(self, index,randomResizeCrop = False):
+    def get_mosaic(self, index):
         """Gets images and labels after mosaic augments"""
         indices = [index] + random.choices(
             range(0, len(self.img_paths)), k=3
         )  # 3 additional image indices
         random.shuffle(indices)
-        imgs, hs, ws, labels = [], [], [], []
+        imgs, hs, ws, labels, segments= [], [], [], [], []
         for index in indices:
             img, _, (h, w) = self.load_image(index)
             labels_per_img = self.labels[index]
+            segments_per_img = [self.segments[index]]
             imgs.append(img)
             hs.append(h)
             ws.append(w)
             labels.append(labels_per_img)
-        img, labels = mosaic_augmentation(self.img_size, imgs, hs, ws, labels, self.hyp,randomResizeCrop=randomResizeCrop)
+            segments.append(segments_per_img)
+        img, labels = mosaic_augmentation(self.img_size, imgs, hs, ws, labels, self.hyp,segments)
+        return img, labels
+
+    def get_cache_mosaic(self, index):
+        """Gets images and labels after mosaic augments"""
+
+        img, _, (h, w) = self.load_image(index)
+        labels_per_img = self.labels[index]
+        segments_per_img = [self.segments[index]]
+        img_information = [img, h, w, labels_per_img,segments_per_img]
+        self.all_results_cache.append(copy.deepcopy(img_information))
+        # self.results_cache.append(copy.deepcopy(img))
+        # self.hs.append(copy.deepcopy(h))
+        # self.ws.append(copy.deepcopy(w))
+        # self.img_label.append(copy.deepcopy(labels_per_img))
+
+        if len(self.all_results_cache) <= 4:
+            indices = random.choices(
+                range(0, len(self.img_paths)), k=3
+            )  # 3 additional image indices
+            random.shuffle(indices)
+            for index in indices:
+                img, _, (h, w) = self.load_image(index)
+                labels_per_img = self.labels[index]
+                segments_per_img = [self.segments[index]]
+                #segments.append(segments_per_img)
+                img_information = [img, h, w, labels_per_img,segments_per_img]
+                self.all_results_cache.append(copy.deepcopy(img_information))
+                # self.results_cache.append(copy.deepcopy(img))
+                # self.hs.append(copy.deepcopy(h))
+                # self.ws.append(copy.deepcopy(w))
+                # self.img_label.append(copy.deepcopy(labels_per_img))
+        else:
+            if len(self.all_results_cache) > self.max_cached_images:
+                if self.random_pop:
+                    index = random.randint(0, len(self.all_results_cache) - 1)
+                else:
+                    index = 0
+                self.all_results_cache.pop(index)
+
+                # self.results_cache.pop(index)
+                # self.hs.pop(index)
+                # self.ws.pop(index)
+                # self.img_label.pop(index)
+            else:
+                pass
+        indices = [-1] + random.choices(
+            range(0, len(self.all_results_cache)-1), k=3
+        )  # 3 additional image indices
+        cache_img, cache_hs, cache_ws, cache_labels,segments = [], [], [], [],[]
+        for index in indices:
+            cache_img.append(self.all_results_cache[index][0])
+            cache_hs.append(self.all_results_cache[index][1])
+            cache_ws.append(self.all_results_cache[index][2])
+            cache_labels.append(self.all_results_cache[index][3])
+            segments.append(self.all_results_cache[index][4])
+        img, labels = mosaic_augmentation(self.img_size, cache_img, cache_hs, cache_ws, cache_labels, self.hyp,segments)
+
+
+
+
+        return img, labels
+
+    def get_mosaic_mixup(self, index):
+        """Gets images and labels after mosaic augments"""
+
+
+        if self.use_cache:
+            img, _, (h, w) = self.load_image(index)
+            labels_per_img = self.labels[index]
+            img_information_mixup = [img, h, w, labels_per_img]
+            self.all_results_cache_mixup.append(copy.deepcopy(img_information_mixup))
+
+            if len(self.all_results_cache_mixup) <= 4:
+                indices = random.choices(
+                    range(0, len(self.img_paths)), k=3
+                )  # 3 additional image indices
+                random.shuffle(indices)
+                for index in indices:
+                    img, _, (h, w) = self.load_image(index)
+                    labels_per_img = self.labels[index]
+                    img_information_mixup = [img, h, w, labels_per_img]
+                    self.all_results_cache_mixup.append(copy.deepcopy(img_information_mixup))
+
+            else:
+                if len(self.all_results_cache_mixup) > self.max_cached_mixup_images:
+                    if self.random_pop:
+                        index = random.randint(0, len(self.all_results_cache_mixup) - 1)
+                    else:
+                        index = 0
+                    self.all_results_cache_mixup.pop(index)
+                else:
+                    pass
+            indices = [-1] + random.choices(
+                range(0, len(self.all_results_cache_mixup)), k=3
+            )  # 3 additional image indices
+            cache_img_mixup, cache_hs_mixup, cache_ws_mixup, cache_labels_mixup = [], [], [], []
+            for index in indices:
+                cache_img_mixup.append(self.all_results_cache_mixup[index][0])
+                cache_hs_mixup.append(self.all_results_cache_mixup[index][1])
+                cache_ws_mixup.append(self.all_results_cache_mixup[index][2])
+                cache_labels_mixup.append(self.all_results_cache_mixup[index][3])
+            img, labels = mosaic_augmentation(self.img_size, cache_img_mixup, cache_hs_mixup, cache_ws_mixup, cache_labels_mixup, self.hyp)
+
+
+
+        else:
+
+            indices = [index] + random.choices(
+                range(0, len(self.img_paths)), k=3
+            )  # 3 additional image indices
+            random.shuffle(indices)
+            imgs, hs, ws, labels = [], [], [], []
+            for index in indices:
+                img, _, (h, w) = self.load_image(index)
+                labels_per_img = self.labels[index]
+                imgs.append(img)
+                hs.append(h)
+                ws.append(w)
+                labels.append(labels_per_img)
+            img, labels = mosaic_augmentation(self.img_size, imgs, hs, ws, labels, self.hyp)
         return img, labels
 
     def general_augment(self, img, labels):
@@ -443,7 +689,7 @@ class TrainValDataset(Dataset):
                 shapes[i] = [1, 1 / mini]
         self.batch_shapes = (
             np.ceil(np.array(shapes) * self.img_size / self.stride + self.pad).astype(
-                np.int
+                np.int64  ####np.int
             )
             * self.stride
         )
@@ -489,7 +735,7 @@ class TrainValDataset(Dataset):
     @staticmethod
     def check_label_files(args):
         img_path, lb_path = args
-        nm, nf, ne, nc, msg = 0, 0, 0, 0, ""  # number (missing, found, empty, message
+        nm, nf, ne, nc, msg, segments = 0, 0, 0, 0, "",[]  # number (missing, found, empty, message
         try:
             if osp.exists(lb_path):
                 nf = 1  # label found
@@ -497,7 +743,12 @@ class TrainValDataset(Dataset):
                     labels = [
                         x.split() for x in f.read().strip().splitlines() if len(x)
                     ]
+                    if any(len(x) > 6 for x in labels):  # is segment
+                        classes = np.array([x[0] for x in labels], dtype=np.float32)
+                        segments = [np.array(x[1:], dtype=np.float32).reshape(-1, 2) for x in labels]  # (cls, xy1...)
+                        labels = np.concatenate((classes.reshape(-1, 1), segments2boxes(segments)), 1)  # (cls, xywh)
                     labels = np.array(labels, dtype=np.float32)
+
                 if len(labels):
                     assert all(
                         len(l) == 5 for l in labels
@@ -512,16 +763,22 @@ class TrainValDataset(Dataset):
                     _, indices = np.unique(labels, axis=0, return_index=True)
                     if len(indices) < len(labels):  # duplicate row check
                         labels = labels[indices]  # remove duplicates
+                        if segments:
+                            segments = [segments[x] for x in indices]
                         msg += f"WARNING: {lb_path}: {len(labels) - len(indices)} duplicate labels removed"
+                    lb = labels
                     labels = labels.tolist()
+                    #segments = segments.tolist()
                 else:
                     ne = 1  # label empty
                     labels = []
+                    lb = np.zeros((0, 5), dtype=np.float32)
             else:
                 nm = 1  # label missing
                 labels = []
+                lb = np.zeros((0, 5), dtype=np.float32)
 
-            return img_path, labels, nc, nm, nf, ne, msg
+            return img_path, labels,lb, nc, nm, nf, ne, msg, segments
         except Exception as e:
             nc = 1
             msg = f"WARNING: {lb_path}: ignoring invalid labels: {e}"
@@ -559,7 +816,7 @@ class TrainValDataset(Dataset):
                     x2 = (x + w / 2) * img_w
                     y2 = (y + h / 2) * img_h
                     # cls_id starts from 0
-                    cls_id = int(c) + 1
+                    cls_id = int(c)
                     w = max(0, x2 - x1)
                     h = max(0, y2 - y1)
                     dataset["annotations"].append(
@@ -641,3 +898,18 @@ class LoadData:
         self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
     def __len__(self):
         return self.nf  # number of files
+def segments2boxes(segments):
+    # Convert segment labels to box labels, i.e. (cls, xy1, xy2, ...) to (cls, xywh)
+    boxes = []
+    for s in segments:
+        x, y = s.T  # segment xy
+        boxes.append([x.min(), y.min(), x.max(), y.max()])  # cls, xyxy
+    return xyxy2xywh(np.array(boxes))  # cls, xywh
+def xyxy2xywh(x):
+    # Convert nx4 boxes from [x1, y1, x2, y2] to [x, y, w, h] where xy1=top-left, xy2=bottom-right
+    y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
+    y[..., 0] = (x[..., 0] + x[..., 2]) / 2  # x center
+    y[..., 1] = (x[..., 1] + x[..., 3]) / 2  # y center
+    y[..., 2] = x[..., 2] - x[..., 0]  # width
+    y[..., 3] = x[..., 3] - x[..., 1]  # height
+    return y

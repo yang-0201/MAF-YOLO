@@ -6,7 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from yolov6.layers.common import *
 from yolov6.utils.torch_utils import initialize_weights
-
+from yolov6.models.efficientrep import *
+from yolov6.models.reppan import *
 from yolov6.models.effidehead import Detect, build_effidehead_layer
 from utils.general import LOGGER
 from utils.torch_utils import model_info
@@ -22,33 +23,40 @@ def parse_model(d, ch = 3,nc = 0):  # model_dict, input_channels(3)
                 args[j] = eval(a) if isinstance(a, str) else a  # eval strings
             except NameError:
                 pass
+
         n = n_  = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [SimConv,RepConvBlock,RepVGGBlock,QARepVGGBlock,Transpose,SimSPPF,SimCSPSPPF, Conv, SPPF]:
+        if m in [Conv_C3,Bottleneck, SPPF,RepBlock,RepConvBlock1,SimConv,RepConvBlock,RepVGGBlock,QARepVGGBlock,Transpose,SimSPPF,SPSimCSPSPPF,SimCSPSPPF,BepC3, BepBotC3, Conv]:
             c1, c2 = ch[f], args[0]
             c2 = make_divisible(c2 * gw, 4)
 
             args = [c1, c2, *args[1:]]
-            if m in [ RepConvBlock]:
+            if m in [ RepBlock,RepConvBlock,RepConvBlock1]:
                 args.insert(2, n)  # number of repeats
                 n = 1
-        elif m in [CSPDepthResELAN,CSPRepResELAN, CSPSDepthResELAN, SDepthMP, RepHDW, RepELANMS,RepELANMS2]:
+        elif m in [CSPDepthResELAN,CSPRepResELAN, CSPSDepthResELAN, SDepthMP, CSPDepthResELANUni, RepGELANMS,RepHDW, C2f]:
             c1, c2 = ch[f], args[0]
             args = [c1, c2, *args[1:]]
             args.insert(2, n)  # number of repeats
             n = 1
-        elif m in [RepELANMSv2]:
-            c1, c2 = ch[f], args[0]
-            args = [c1, c2, *args[1:]]
         elif m is nn.BatchNorm2d:
             args = [ch[f]]
-        elif m in [Concat]:
+        elif m is Concat:
             c2 = sum(ch[x] for x in f)
         elif m in [Out]:
             pass
-        elif m in [Head_layers, Head_out, Head_simota, Head_DepthUni]:
+        elif m in [AVG_down]:
+            c1 = ch[f]
+            c2 = c1
+            # c2 = make_divisible(c2 * gw, 8)
+            # args = [args[1:]]
+        elif m in [Head_layers, Head_out, Head_simota, Head_Depth]:
             c1, c2 = ch[f], args[0]
             c2 = make_divisible(c2 * gw, 8)
-            args = [c1,c2, args[1],args[2],nc]
+            args = [c1,c2, args[1],nc]
+        elif m in [Head_DepthUni]:
+            c1, c2 = ch[f], args[0]
+            c2 = make_divisible(c2 * gw, 8)
+            args = [c1,c2, args[1], args[2], nc]
         elif m is Head_PConv:
             c1, c2 = ch[f], args[0]
             c2 = make_divisible(c2 * gw, 8)
@@ -57,13 +65,44 @@ def parse_model(d, ch = 3,nc = 0):  # model_dict, input_channels(3)
             c1 = ch[f]
             c2 = args[0]
             args = [c1, c2, *args[1:]]
-        elif m in [AVG_down]:
+        elif m in [ Focal_Depth]:
             c1 = ch[f]
-            c2 = c1
-        elif m in [MPRep]:
+            c2 = args[0]
+            # c2 = make_divisible(c2 * gw, 8)
+            args = [c1, c2 ,*args[1:]]
+
+        elif m in [ConvBnAct, FocalTransformer, CoAtNetMBConv, ConvGE, CoAtNetTrans, MBConv_block, CoAtTrans_block,
+                   MBConvC3]:
+            c1 = ch[f]
+            c2 = args[0]
+            args = [c1, c2, *args[1:]]
+        elif m in [RepGhostC3]:
+            c1 = ch[f]
+            c2 = args[0]
+            c_mid = args[1]
+            c2 = make_divisible(c2 * gw, 8)
+            c_mid = make_divisible(c_mid * gw, 8)
+            args = [c1, c2, c_mid,*args[2:]]
+        elif m in [RepGhostBottleneck]:
+            c1 = args[0]
+            c2 = int(args[3] * args[5])
+        elif m is Sequentially_Add:
+            c2 = args[0]
+            pass
+        elif m in [MP1,MPRep]:
             c1 = ch[f]
             c2 = args[0]
             c2 = make_divisible(c2 * gw, 8)
+            args = [c1, c2, *args[1:]]
+        elif m in [EAEF]:
+            c1 = args[0]
+            c2 = args[0]
+        elif m is EAEF_out:
+            c1 = args[1]
+            c2 = args[1]
+            args = [args[0]]
+        elif m in [RepNCSPELAN4]:
+            c1, c2 = ch[f], args[0]
             args = [c1, c2, *args[1:]]
         else:
             c2 = ch[f]
@@ -152,8 +191,12 @@ class Model(nn.Module):
 
                 if m.f != -1:  # if not from previous layer
                     x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
+                # try:
                 number_layer = number_layer+1
                 x = m(x)  # run
+                # except:
+                #     print("run error ,error layer: "+str(number_layer-1))
+
                 y.append(x if m.i in self.save else None)  # save output
         ############
         else:
@@ -246,10 +289,10 @@ def build_network_yaml(config, channels, num_classes, anchors, num_layers):
     return head
 def build_model(cfg, num_classes, device,img_size):
     model = Model(cfg, channels=3, num_classes=num_classes, anchors=cfg.model.head.anchors).to(device)
-    # model = torch.compile(model,mode = 'max-autotune')
+    # model = torch.compile(model, backend = 'inductor')
     from yolov6.utils.events import LOGGER
     LOGGER.info("Model Summary: {}".format(get_model_info(model, img_size = img_size,cfg = cfg)))
-    LOGGER.info("Because of the use of heavy parameterization, the number of parameters and floating point operations counted before training "+
+    LOGGER.info("Because of the use of reparameterization, the number of parameters and floating point operations counted before training "+
                 "may not be accurate and need to be verified using eval.py in the validation phase to get the correct information")
     return model
 

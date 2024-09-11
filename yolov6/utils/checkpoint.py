@@ -24,7 +24,6 @@ def load_state_dict(weights, model, map_location=None):
     del ckpt, state_dict, model_state_dict
     return model
 
-
 def load_state_dict_yaml(weights, model, map_location=None):
     """Load weights from checkpoint file, only assign weights those layers' name and shape are match."""
     ckpt = torch.load(weights, map_location=map_location)
@@ -52,6 +51,33 @@ def load_state_dict_yaml(weights, model, map_location=None):
     model.load_state_dict(state_dict, strict=False)
     del ckpt, state_dict, model_state_dict
     return model
+# def load_state_dict_yaml(weights, model, map_location=None):
+#     """Load weights from checkpoint file, only assign weights those layers' name and shape are match."""
+#     ckpt = torch.load(weights, map_location=map_location)
+#     # state_dict = ckpt['model'].float().state_dict()
+#     # state_dict = ckpt['model'].state_dict()
+#     model_dict = model.state_dict()
+#     model_number = str(len(model_dict))
+#     ckpt_number1 = 0
+#     # ckpt_number = str(len(state_dict))
+#     ckpt_number = str(len(ckpt["model"].items()))
+#     for key, weight in ckpt['model'].items():
+#         if key in model_dict:
+#             # print(key+"key ok")
+#             if weight.shape == model_dict[key].shape:
+#                 ckpt_number1 = ckpt_number1 + 1
+#             else:
+#                 print(key+"can not change")
+#     print("******************")
+#     print("transform_weight: " + str(ckpt_number1) + "/" + ckpt_number + " from " + weights)
+#     print("transform_model_weight: " + str(ckpt_number1) + "/" + model_number + " from " + weights)
+#     print("******************")
+#
+#     model_state_dict = model.state_dict()
+#     state_dict = {k: v for k, v in ckpt["model"].items() if k in model_state_dict and v.shape == model_state_dict[k].shape}
+#     model.load_state_dict(state_dict, strict=False)
+#     del ckpt, state_dict, model_state_dict
+#     return model
 
 
 def load_checkpoint(weights, map_location=None, inplace=True, fuse=True):

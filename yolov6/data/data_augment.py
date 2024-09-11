@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 # This code is based on
 # https://github.com/ultralytics/yolov5/blob/master/utils/dataloaders.py
-import copy
+
 import math
 import random
 import torch
@@ -17,7 +17,6 @@ names = [ 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 
          'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
          'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear',
          'hair drier', 'toothbrush' ]
-dycache_copypaste = []
 import albumentations as A
 
 def albumentation(im, labels,size=640):
@@ -300,37 +299,6 @@ def copy_paste(im, labels, segments, p=0.5):
             labels = np.concatenate((labels, [[l[0], *box]]), 0)
             segments.append(np.concatenate((w - s[:, 0:1], s[:, 1:2]), 1))
             cv2.drawContours(im_new, [segments[j].astype(np.int32)], -1, (1, 1, 1), cv2.FILLED)
-
-        result = cv2.flip(im, 1)  # augment segments (flip left-right)
-        i = cv2.flip(im_new, 1).astype(bool)
-        im[i] = result[i]  # cv2.imwrite('debug.jpg', im)  # debug
-
-    return im, labels, segments
-def dy_cache_copy_paste(im, labels, segments, p=0.5):
-    # Implement Copy-Paste augmentation https://arxiv.org/abs/2012.07177, labels as nx5 np.array(cls, xyxy)
-    n = len(segments)
-    if p and n:
-        h, w, c = im.shape  # height, width, channels
-        im_new = np.zeros(im.shape, np.uint8)
-
-        # calculate ioa first then select indexes randomly
-        boxes = np.stack([w - labels[:, 3], labels[:, 2], w - labels[:, 1], labels[:, 4]], axis=-1)  # (n, 4)
-        ioa = bbox_ioa(boxes, labels[:, 1:5])  # intersection over area
-        indexes = np.nonzero((ioa < 0.30).all(1))[0]  # (N, )
-        n = len(indexes)
-        for j in random.sample(list(indexes), k=round(p * n)):
-            img_information = [labels[j], boxes[j], segments[j]]
-            dycache_copypaste.append(copy.deepcopy(img_information))
-        for number in random.sample(list(indexes), k=round(p * n)):
-            copy_index = random.randint(0, len(dycache_copypaste) - 1)
-            l, box, s = dycache_copypaste[copy_index][0], dycache_copypaste[copy_index][1], dycache_copypaste[copy_index][2]
-            labels = np.concatenate((labels, [[l[0], *box]]), 0)
-            segments.append(np.concatenate((w - s[:, 0:1], s[:, 1:2]), 1))
-            cv2.drawContours(im_new, [segments[j].astype(np.int32)], -1, (1, 1, 1), cv2.FILLED)
-            if len(dycache_copypaste) > 40:
-                pop_index = random.randint(0, len(dycache_copypaste) - 1)
-                dycache_copypaste.pop(pop_index)
-
 
         result = cv2.flip(im, 1)  # augment segments (flip left-right)
         i = cv2.flip(im_new, 1).astype(bool)
