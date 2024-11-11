@@ -94,6 +94,34 @@ names: ["car","person","bike"]
 ## Citation
 
 If our code or model is helpful to your work, please cite our paper. We would be very grateful!
+```BibTeX
+@InProceedings{10.1007/978-981-97-8858-3_34,
+author="Yang, Zhiqiang
+and Guan, Qiu
+and Zhao, Keer
+and Yang, Jianmin
+and Xu, Xinli
+and Long, Haixia
+and Tang, Ying",
+editor="Lin, Zhouchen
+and Cheng, Ming-Ming
+and He, Ran
+and Ubul, Kurban
+and Silamu, Wushouer
+and Zha, Hongbin
+and Zhou, Jie
+and Liu, Cheng-Lin",
+title="Multi-branch Auxiliary Fusion YOLO with Re-parameterization Heterogeneous Convolutional for Accurate Object Detection",
+booktitle="Pattern Recognition and Computer Vision",
+year="2025",
+publisher="Springer Nature Singapore",
+address="Singapore",
+pages="492--505",
+abstract="Due to the effective performance of multi-scale feature fusion, Path Aggregation FPN (PAFPN) is widely employed in YOLO detectors. However, it cannot efficiently and adaptively integrate high-level semantic information with low-level spatial information simultaneously. We propose a new model named MAF-YOLO in this paper, which is a novel object detection framework with a versatile neck named Multi-Branch Auxiliary FPN (MAFPN). Within MAFPN, the Superficial Assisted Fusion (SAF) module is designed to combine the output of the backbone with the neck, preserving an optimal level of shallow information to facilitate subsequent learning. Meanwhile, the Advanced Assisted Fusion (AAF) module deeply embedded within the neck conveys a more diverse range of gradient information to the output layer. Furthermore, our proposed Re-parameterized Heterogeneous Efficient Layer Aggregation Network (RepHELAN) module ensures that both the overall model architecture and convolutional design embrace the utilization of heterogeneous large convolution kernels. Therefore, this guarantees the preservation of information related to small targets while simultaneously achieving the multi-scale receptive field. Finally, taking the nano version of MAF-YOLO for example, it can achieve 42.4{\%} AP on COCO with only 3.76M learnable parameters and 10.51G FLOPs, and approximately outperforms YOLOv8n by about 5.1{\%}. The source code of this work is available at: https://github.com/yang-0201/MAF-YOLO.",
+isbn="978-981-97-8858-3"
+}
+```
+or
 
 ```BibTeX
 @article{yang2024multi,
