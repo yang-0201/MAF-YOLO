@@ -25,7 +25,9 @@ MS COCO
 | [MAF-YOLO-S](https://github.com/yang-0201/MAF-YOLO/releases/download/v1.0.0/MAFYOLOs.pt) |   640  |  8.6M   | 25.5G |      47.4%       |             64.3%         | 47.2% | 64.0%    |300 |
 | [MAF-YOLO-M](https://github.com/yang-0201/MAF-YOLO/releases/download/v1.0.0/MAFYOLOm.pt) |   640  |  23.7M  | 76.7G |      51.2%       |             68.5%           | 50.9% | 68.1%   |300 |
 
-Our second version of the work to improve on YOLOv10 has yielded preliminary results that compare favorably with both YOLOv9 and YOLOv10, which will be made public in the future!
+Our second version of the work to improve on YOLOv10 has yielded preliminary results that compare favorably with both YOLOv10 and YOLO11.
+
+You can see it at this link: [MAF-YOLOv2](https://github.com/yang-0201/MAF-YOLOv2)!
     
 | Model                                                  | Test Size | #Params | FLOPs | AP<sup>val</sup> | AP<sub>50</sub><sup>val</sup> | AP<sup>test2017</sup> | AP<sub>50</sub><sup>test2017</sup> |epoch |
 |:-------------------------------------------------------|:----:|:-------:|:-----:|:----------------:|:-----------------------------:|:-----------------------------:|:-----------------------------:|:-----------------------------:|
