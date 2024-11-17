@@ -1,5 +1,8 @@
 # MAF-YOLO
 [![arxiv.org](http://img.shields.io/badge/cs.CV-arXiv%3A2407.04381-B31B1B.svg)](https://arxiv.org/abs/2407.04381)
+## UPDATES 🔥
+- 2024/6/25: Add MAF-YOLO
+- 2024/11/11: Add [MAF-YOLOv2](https://github.com/yang-0201/MAF-YOLOv2)
 
 This is the official MegEngine implementation of MAF-YOLO, from the following PRCV2024 (Oral) paper:
 
